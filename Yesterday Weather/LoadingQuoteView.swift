@@ -45,7 +45,7 @@ struct LoadingQuoteView: View {
                         // Quote text with dynamic scaling for poetry
                         QuoteTextView(text: quote.text)
                             .padding(.horizontal, 32)
-                            .frame(maxWidth: geometry.size.width - 64) // Ensure it fits within screen
+                            .frame(maxWidth: geometry.size.width > 100 ? geometry.size.width - 64 : 200) // Safe width calculation
 
                         // Attribution below quote
                         Text("— \(quote.attribution) —")
@@ -55,7 +55,7 @@ struct LoadingQuoteView: View {
                             .italic()
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
-                            .frame(maxWidth: geometry.size.width - 64) // Ensure it fits within screen
+                            .frame(maxWidth: geometry.size.width > 100 ? geometry.size.width - 64 : 200) // Safe width calculation
                     }
 
                     Spacer()
@@ -88,9 +88,9 @@ struct LoadingQuoteView: View {
     }
 
     private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
             if timeRemaining > 0 {
-                timeRemaining -= 0.1
+                timeRemaining -= 0.5
             } else {
                 dismissQuote()
             }

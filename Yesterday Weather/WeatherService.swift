@@ -469,6 +469,10 @@ enum WeatherServiceError: LocalizedError {
     case invalidResponse
     case decodingError(Error)
     case networkError(Error)
+    case cacheError(String)
+    case apiTimeout
+    case noData
+    case invalidLocation
 
     var errorDescription: String? {
         switch self {
@@ -478,6 +482,27 @@ enum WeatherServiceError: LocalizedError {
             return "Failed to decode weather data: \(error.localizedDescription)"
         case .networkError(let error):
             return "Network error: \(error.localizedDescription)"
+        case .cacheError(let message):
+            return "Cache error: \(message)"
+        case .apiTimeout:
+            return "Weather service request timed out"
+        case .noData:
+            return "No weather data available"
+        case .invalidLocation:
+            return "Invalid location coordinates"
+        }
+    }
+
+    var recoveryStrategy: String {
+        switch self {
+        case .networkError, .apiTimeout:
+            return "Please check your internet connection and try again"
+        case .invalidLocation:
+            return "Please select a different location"
+        case .noData:
+            return "Weather data temporarily unavailable"
+        default:
+            return "Please try again later"
         }
     }
 }

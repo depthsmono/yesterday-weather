@@ -71,7 +71,10 @@ struct LocationsView: View {
 
                                 ForEach(locationManager.searchResults) { result in
                                     SearchResultCard(result: result) {
-                                        let newLocation = result.toWeatherLocation()
+                                        guard let newLocation = result.toWeatherLocation() else {
+                                            print("LocationsView: Failed to create valid location from search result")
+                                            return
+                                        }
                                         locationManager.addLocation(newLocation)
                                         locationManager.setCurrentLocation(newLocation)
                                         searchText = ""
