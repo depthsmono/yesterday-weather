@@ -64,6 +64,7 @@ struct HourlyWeather: Codable {
     let temperature2m: [Double]
     let relativeHumidity2m: [Int]
     let apparentTemperature: [Double]
+    let precipitation: [Double]
     let rain: [Double]
     let showers: [Double]
     let cloudCover: [Int]
@@ -78,6 +79,7 @@ struct HourlyWeather: Codable {
         case temperature2m = "temperature_2m"
         case relativeHumidity2m = "relative_humidity_2m"
         case apparentTemperature = "apparent_temperature"
+        case precipitation
         case rain
         case showers
         case cloudCover = "cloud_cover"
@@ -225,9 +227,9 @@ struct WeatherComparison {
         if abs(diff) < 0.1 {
             return .similar("Similar precipitation")
         } else if diff > 0 {
-            return .higher("More precipitation (+\(String(format: "%.1f", diff))mm)")
+            return .higher("More precipitation (+\(String(format: "%.1f", diff))\")")
         } else {
-            return .lower("Less precipitation (\(String(format: "%.1f", diff))mm)")
+            return .lower("Less precipitation (\(String(format: "%.1f", diff))\")")
         }
     }
 
@@ -432,7 +434,7 @@ struct HourlyDataPoint {
 
         self.temperature = hourlyWeather.temperature2m[index]
         self.apparentTemperature = hourlyWeather.apparentTemperature[index]
-        self.precipitation = (hourlyWeather.rain[index] + hourlyWeather.showers[index]) * 100 // Convert to percentage
+        self.precipitation = hourlyWeather.precipitation[index] // Precipitation in inches from API
         self.humidity = hourlyWeather.relativeHumidity2m[index]
         self.cloudCover = hourlyWeather.cloudCover[index]
         self.windSpeed = hourlyWeather.windSpeed10m[index]

@@ -188,19 +188,23 @@ struct WeatherIntelligence {
     private static func generateNarrative(conditions: [String], factors: WeatherFactors) -> String {
         var narrativeParts: [String] = []
 
-        // Temperature narrative
+        // Temperature narrative - aligned with ComparisonAnalysis wording
         if conditions.contains("much_colder") {
-            narrativeParts.append("Much colder")
+            let deltaText = String(format: "%.0f", abs(factors.temperatureDelta))
+            narrativeParts.append("Much cooler today (-\(deltaText)°F)")
         } else if conditions.contains("much_warmer") {
-            narrativeParts.append("Much warmer")
+            let deltaText = String(format: "%.0f", factors.temperatureDelta)
+            narrativeParts.append("Much warmer today (+\(deltaText)°F)")
         } else if conditions.contains("cooler") {
-            narrativeParts.append("Cooler")
+            let deltaText = String(format: "%.0f", abs(factors.temperatureDelta))
+            narrativeParts.append("Cooler today (-\(deltaText)°F)")
         } else if conditions.contains("warmer") {
-            narrativeParts.append("Warmer")
+            let deltaText = String(format: "%.0f", factors.temperatureDelta)
+            narrativeParts.append("Warmer today (+\(deltaText)°F)")
         } else if conditions.contains("slightly_cooler") {
-            narrativeParts.append("Slightly cooler")
+            narrativeParts.append("Slightly cooler today")
         } else if conditions.contains("slightly_warmer") {
-            narrativeParts.append("Slightly warmer")
+            narrativeParts.append("Slightly warmer today")
         }
 
         // Humidity narrative - NEW!
@@ -239,7 +243,7 @@ struct WeatherIntelligence {
         // Combine narratives with proper grammar
         let baseNarrative: String
         if narrativeParts.isEmpty {
-            baseNarrative = "Similar conditions"
+            baseNarrative = "Similar conditions to yesterday"
         } else if narrativeParts.count == 1 {
             baseNarrative = narrativeParts[0]
         } else if narrativeParts.count == 2 {
@@ -250,9 +254,7 @@ struct WeatherIntelligence {
             baseNarrative = "\(parts.joined(separator: ", ")) and \(lastPart)"
         }
 
-        let comparison = narrativeParts.isEmpty ? "to yesterday" : "than yesterday"
-
-        return "\(baseNarrative) \(comparison)"
+        return baseNarrative
     }
 
     // MARK: - Contextual Advice Generation
@@ -260,55 +262,44 @@ struct WeatherIntelligence {
     private static func generateContextualAdvice(factors: WeatherFactors, experiences: Set<WeatherExperience>) -> [String] {
         var advice: [String] = []
 
-        // Temperature-based advice
-        if factors.temperatureDelta < -10 {
-            advice.append("Bundle up! Consider a hat and gloves 🧤")
-        } else if factors.temperatureDelta < -5 {
-            advice.append("Dress warmly - it's noticeably cooler 🧥")
-        } else if factors.temperatureDelta > 10 {
-            advice.append("Dress lighter - it's much warmer today ☀️")
-        }
-
+        // Focus on practical weather impacts, not clothing advice
         // Precipitation advice
         if factors.precipitationDelta > 0.2 {
-            advice.append("Pack an umbrella - rain expected ☂️")
+            advice.append("Rain expected ☂️")
         } else if factors.precipitationDelta > 0.05 {
-            advice.append("Light rain possible - consider a jacket 🌧️")
+            advice.append("Light rain possible 🌧️")
         }
 
         // Wind advice
         if factors.windSpeedDelta > 8 {
-            advice.append("Expect strong winds - secure loose items 💨")
+            advice.append("Strong winds expected 💨")
         }
 
-        // Experience-specific advice
+        // Experience-specific advice (activity impacts, not clothing)
         if experiences.contains(.bike) && factors.windSpeedDelta > 5 {
-            advice.append("Cycling will be more challenging due to wind 🚴‍♂️")
+            advice.append("Cycling conditions more challenging 🚴‍♂️")
         }
 
         if experiences.contains(.walking) && factors.precipitationDelta > 0.1 {
-            advice.append("Walking conditions may be wet - wear appropriate shoes 👟")
+            advice.append("Walking conditions may be wet 👟")
         }
 
         if experiences.contains(.workingOutside) {
-            if factors.temperatureDelta < -5 {
-                advice.append("Outdoor work will be colder - layer appropriately 🏗️")
-            }
             if factors.precipitationDelta > 0.1 {
-                advice.append("Outdoor work may be affected by rain ⛈️")
+                advice.append("Outdoor work may be affected ⛈️")
             }
         }
 
         if experiences.contains(.transit) && factors.precipitationDelta > 0.15 {
-            advice.append("Allow extra time for public transit due to weather 🚌")
+            advice.append("Allow extra time for transit 🚌")
         }
 
         // Weather pattern advice
         switch factors.weatherCodeChange {
         case .clearToStorm:
-            advice.append("Weather is worsening - plan accordingly ⛈️")
+            advice.append("Conditions worsening ⛈️")
         case .stormToClear:
-            advice.append("Weather is improving - enjoy the clearer conditions! 🌤️")
+            advice.append("Conditions improving 🌤️")
         default:
             break
         }

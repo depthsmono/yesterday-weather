@@ -140,6 +140,7 @@ class MockWeatherService: WeatherServiceProtocol {
                 let baseTemp = 72.0
                 return baseTemp + (hour >= 6 && hour <= 18 ? 10.0 : -5.0)
             },
+            precipitation: Array(repeating: 0.0, count: 12),
             rain: Array(repeating: 0.0, count: 12),
             showers: Array(repeating: 0.0, count: 12),
             cloudCover: Array(repeating: 30, count: 12),

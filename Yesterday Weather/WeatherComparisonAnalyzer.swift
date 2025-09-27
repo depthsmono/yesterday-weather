@@ -152,15 +152,15 @@ struct WeatherComparisonAnalyzer {
             let absDelta = abs(delta)
             if absDelta > 0.5 {
                 narrative = generateMuchDrierNarrative(today: todayPrecip, yesterday: yesterdayPrecip)
-                icon = "sun.max.fill"
+                icon = "drop.fill"
                 severity = .significant
             } else if absDelta > 0.2 {
                 narrative = generateDrierNarrative(today: todayPrecip, yesterday: yesterdayPrecip)
-                icon = "cloud.sun.fill"
+                icon = "drop.fill"
                 severity = .moderate
             } else {
                 narrative = generateSlightlyDrierNarrative(today: todayPrecip, yesterday: yesterdayPrecip)
-                icon = "cloud.fill"
+                icon = "drop.fill"
                 severity = .minor
             }
         }
@@ -384,7 +384,7 @@ struct WeatherComparisonAnalyzer {
 
     private static func determinePrecipitationIcon(_ precipitation: Double) -> String {
         if precipitation < 0.01 {
-            return "sun.max.fill"
+            return "drop.fill"
         } else if precipitation < 0.1 {
             return "cloud.drizzle.fill"
         } else if precipitation < 0.3 {

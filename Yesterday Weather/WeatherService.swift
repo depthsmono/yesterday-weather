@@ -323,7 +323,7 @@ class WeatherService: ObservableObject {
         let queryItems = [
             URLQueryItem(name: "latitude", value: String(location.latitude)),
             URLQueryItem(name: "longitude", value: String(location.longitude)),
-            URLQueryItem(name: "hourly", value: "temperature_2m,relative_humidity_2m,apparent_temperature,rain,showers,cloud_cover,visibility,wind_direction_10m,wind_speed_10m,temperature_80m,weather_code"),
+            URLQueryItem(name: "hourly", value: "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,cloud_cover,visibility,wind_direction_10m,wind_speed_10m,temperature_80m,weather_code"),
             URLQueryItem(name: "temperature_unit", value: "fahrenheit"),
             URLQueryItem(name: "wind_speed_unit", value: "mph"),
             URLQueryItem(name: "precipitation_unit", value: "inch"),
@@ -341,7 +341,7 @@ class WeatherService: ObservableObject {
         let queryItems = [
             URLQueryItem(name: "latitude", value: String(location.latitude)),
             URLQueryItem(name: "longitude", value: String(location.longitude)),
-            URLQueryItem(name: "hourly", value: "temperature_2m,relative_humidity_2m,apparent_temperature,rain,showers,cloud_cover,visibility,wind_direction_10m,wind_speed_10m,temperature_80m,weather_code"),
+            URLQueryItem(name: "hourly", value: "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,cloud_cover,visibility,wind_direction_10m,wind_speed_10m,temperature_80m,weather_code"),
             URLQueryItem(name: "temperature_unit", value: "fahrenheit"),
             URLQueryItem(name: "wind_speed_unit", value: "mph"),
             URLQueryItem(name: "precipitation_unit", value: "inch"),
@@ -366,7 +366,7 @@ class WeatherService: ObservableObject {
             // Daily forecast (10-day)
             URLQueryItem(name: "daily", value: "sunrise,sunset,temperature_2m_max,temperature_2m_min,rain_sum,showers_sum,precipitation_sum,precipitation_probability_max,precipitation_hours"),
             // Hourly forecast (next 2 days)
-            URLQueryItem(name: "hourly", value: "temperature_2m,relative_humidity_2m,apparent_temperature,rain,showers,cloud_cover,visibility,wind_direction_10m,wind_speed_10m,temperature_80m,weather_code"),
+            URLQueryItem(name: "hourly", value: "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,cloud_cover,visibility,wind_direction_10m,wind_speed_10m,temperature_80m,weather_code"),
             // Settings
             URLQueryItem(name: "temperature_unit", value: "fahrenheit"),
             URLQueryItem(name: "wind_speed_unit", value: "mph"),

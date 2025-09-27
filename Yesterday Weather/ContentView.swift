@@ -87,12 +87,13 @@ struct ContentView: View {
                         }
                     }
                 } else if let comparison = weatherService.weatherComparison {
-                    WeatherComparisonView(
+                    LazyWeatherComparisonView(
                         comparison: comparison,
                         tenDayForecast: weatherService.tenDayForecast,
                         hourlyForecast: weatherService.todayHourlyForecast,
                         settingsManager: settingsManager,
-                        quoteOfTheDay: loadingQuote
+                        quoteOfTheDay: loadingQuote,
+                        weatherService: weatherService
                     )
                 } else {
                     LoadingQuoteView(quote: loadingQuote) {
@@ -136,7 +137,61 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Weather Comparison View
+// MARK: - Lazy Weather Comparison View with Progressive Loading
+
+struct LazyWeatherComparisonView: View {
+    let comparison: WeatherComparison
+    let tenDayForecast: TenDayForecast?
+    let hourlyForecast: HourlyForecastData?
+    let settingsManager: SettingsManager
+    let quoteOfTheDay: WeatherQuote
+    let weatherService: WeatherService
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                // Phase 1: Weather headline with narrative and hourly forecast
+                ComparisonHeaderView(comparison: comparison, settingsManager: settingsManager, hourlyForecast: hourlyForecast)
+
+                // Phase 2: Side-by-side comparison loads next
+                HStack(alignment: .top, spacing: 16) {
+                    WeatherCard(
+                        title: "Yesterday",
+                        subtitle: "Actual",
+                        weather: comparison.yesterday,
+                        isPrimary: false
+                    )
+
+                    WeatherCard(
+                        title: "Today",
+                        subtitle: "Forecast",
+                        weather: comparison.today,
+                        isPrimary: true
+                    )
+                }
+                .padding(.horizontal)
+
+                // Phase 3: "How does today compare" section
+                ComparisonDetailsView(comparison: comparison, settingsManager: settingsManager)
+
+                // Phase 4: Additional sections can be added here if needed
+
+                // Phase 5: 10-Day forecast (if available)
+                if let forecast = tenDayForecast {
+                    TenDayForecastView(forecast: forecast)
+                } else if weatherService.isLoadingForecast {
+                    LoadingForecastView()
+                }
+
+                // Phase 6: Quote of the Day
+                QuoteOfTheDayView(quote: quoteOfTheDay)
+            }
+            .padding(.bottom, 20)
+        }
+    }
+}
+
+// MARK: - Weather Comparison View (Legacy)
 
 struct WeatherComparisonView: View {
     let comparison: WeatherComparison
@@ -222,13 +277,7 @@ struct ComparisonHeaderView: View {
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.trailing)
 
-                    if let primaryAdvice = analysis.advice.first {
-                        Text(primaryAdvice)
-                            .font(.caption2)
-                            .foregroundColor(.warmAccent)
-                            .fontWeight(.medium)
-                            .multilineTextAlignment(.trailing)
-                    }
+                    // Removed duplicate advice - narrative is sufficient
                 }
             }
 
@@ -253,6 +302,10 @@ struct ComparisonHeaderView: View {
         .padding()
         .background(LinearGradient.warmHeader)
         .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.warmAccent.opacity(0.2), lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.horizontal)
     }
@@ -375,6 +428,10 @@ struct ComparisonDetailsView: View {
         .padding()
         .background(LinearGradient.warmCard)
         .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.warmTextTertiary.opacity(0.2), lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.horizontal)
     }
@@ -558,6 +615,10 @@ struct TenDayForecastView: View {
         .padding()
         .background(LinearGradient.warmForecast)
         .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.warmTextTertiary.opacity(0.2), lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.horizontal)
     }
@@ -702,6 +763,95 @@ struct QuoteOfTheDayView: View {
         .padding()
         .background(LinearGradient.warmQuote)
         .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.warmTextTertiary.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .padding(.horizontal)
+    }
+}
+
+// MARK: - Progressive Loading Components
+
+struct WeatherHeadlineView: View {
+    let comparison: WeatherComparison
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                WeatherIconView(weatherCode: comparison.today.weatherCode, isDay: true, size: 40)
+                    .foregroundColor(.weatherSun)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(String(format: "%.0f", comparison.today.temperature))°F")
+                        .font(.system(size: 36, weight: .bold))
+
+                    Text(comparison.today.description)
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    let tempDiff = comparison.temperatureDifference
+                    let diffText = tempDiff > 0 ? "+\(String(format: "%.1f", tempDiff))°" : "\(String(format: "%.1f", tempDiff))°"
+                    Text(diffText)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(tempDiff > 0 ? .red : tempDiff < 0 ? .blue : .gray)
+
+                    Text("vs yesterday")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding()
+        .background(LinearGradient.warmHeader)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.warmAccent.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .padding(.horizontal)
+    }
+}
+
+
+struct LoadingForecastView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Next 10 Days")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+                ProgressView()
+                    .scaleEffect(0.8)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(0..<10) { _ in
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(width: 70, height: 120)
+                            .cornerRadius(8)
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+        .padding()
+        .background(LinearGradient.warmForecast)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.warmTextTertiary.opacity(0.2), lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.horizontal)
     }

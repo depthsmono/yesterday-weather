@@ -11,9 +11,6 @@ struct LoadingQuoteView: View {
     let quote: WeatherQuote
     let onDismiss: () -> Void
 
-    @State private var timeRemaining: Double = 7.0
-    @State private var timer: Timer?
-
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -43,77 +40,49 @@ struct LoadingQuoteView: View {
 
                     VStack(spacing: 32) {
                         // Quote text with dynamic scaling for poetry
-                        QuoteTextView(text: quote.text)
-                            .padding(.horizontal, 32)
-                            .frame(maxWidth: geometry.size.width > 100 ? geometry.size.width - 64 : 200) // Safe width calculation
+                        QuoteTextView(
+                            text: quote.text,
+                            maxWidth: geometry.size.width * 0.8
+                        )
 
-                        // Attribution below quote
-                        Text("— \(quote.attribution) —")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
-                            .italic()
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
-                            .frame(maxWidth: geometry.size.width > 100 ? geometry.size.width - 64 : 200) // Safe width calculation
+                        // Attribution below quote - right aligned with author on top, work on bottom
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(quote.author)
+                                .font(.caption)
+                                .foregroundColor(Color(red: 0.2, green: 0.2, blue: 0.2)) // Dark charcoal
+                                .multilineTextAlignment(.trailing)
+
+                            Text(quote.work)
+                                .font(.caption)
+                                .foregroundColor(Color(red: 0.2, green: 0.2, blue: 0.2)) // Dark charcoal
+                                .multilineTextAlignment(.trailing)
+                        }
+                        .frame(maxWidth: geometry.size.width * 0.8, alignment: .trailing)
                     }
 
                     Spacer()
 
-                    // Loading indicator at bottom
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                            .tint(.warmAccent)
-
-                        Text("Loading weather data...")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-
-                        Text("Tap to skip")
-                            .font(.caption)
-                            .foregroundColor(.secondary.opacity(0.7))
-                    }
-                    .padding(.bottom, 50)
+                    // Tap to proceed text at bottom
+                    Text("tap to proceed")
+                        .font(.caption)
+                        .foregroundColor(Color(red: 0.3, green: 0.3, blue: 0.3)) // Darker charcoal grey
+                        .padding(.bottom, 50)
                 }
             }
         }
         .ignoresSafeArea(.all)
         .onTapGesture {
-            dismissQuote()
-        }
-        .onAppear {
-            startTimer()
+            onDismiss()
         }
     }
 
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-            if timeRemaining > 0 {
-                timeRemaining -= 0.5
-            } else {
-                dismissQuote()
-            }
-        }
-    }
-
-    private func dismissQuote() {
-        timer?.invalidate()
-        timer = nil
-        onDismiss()
-    }
-
-    private func checkDismiss() {
-        if timeRemaining <= 0 {
-            dismissQuote()
-        }
-    }
 }
 
 // MARK: - Quote Text View with Dynamic Scaling
 
 struct QuoteTextView: View {
     let text: String
+    let maxWidth: CGFloat
 
     private var lines: [String] {
         text.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -123,26 +92,43 @@ struct QuoteTextView: View {
         text.contains("\n")
     }
 
-    private var dynamicFont: Font {
-        if hasLineBreaks {
-            // Poetry - scale down to preserve line breaks and fit screen
-            let lineCount = lines.count
-            let longestLineLength = lines.map { $0.count }.max() ?? 0
+    private var uniformFontSize: CGFloat {
+        // Calculate the maximum font size that will fit ALL lines within the target width
+        // without any individual line needing to scale down
 
-            // Start smaller for longer lines or more lines
-            switch (lineCount, longestLineLength) {
-            case (1...2, 0..<50): return .title3
-            case (1...2, _): return .headline
-            case (3...4, 0..<40): return .headline
-            case (3...4, _): return .subheadline
-            case (5...6, 0..<35): return .subheadline
-            case (5...6, _): return .callout
-            case (7...8, _): return .callout
-            default: return .footnote
+        if hasLineBreaks {
+            // For poetry: find the longest line and calculate font size based on that
+            let longestLineLength = lines.map { $0.count }.max() ?? 1
+
+            // Estimate character width more accurately for different font sizes
+            // We'll iteratively find the largest size that fits
+            let targetWidth = maxWidth
+
+            // Start with a reasonable font size and work backwards
+            var fontSize: CGFloat = 28 // Start with max desired size
+            let minFontSize: CGFloat = 12 // Minimum readable size
+
+            while fontSize >= minFontSize {
+                // Estimate width needed for longest line at this font size
+                // Character width varies with font size - roughly 0.6 * fontSize for typical text
+                let estimatedCharWidth = fontSize * 0.55
+                let estimatedWidth = CGFloat(longestLineLength) * estimatedCharWidth
+
+                if estimatedWidth <= targetWidth {
+                    // This size fits - use it
+                    return fontSize
+                }
+
+                fontSize -= 1
             }
+
+            return minFontSize
         } else {
-            // Prose - normal flowing text
-            return .title2
+            // For prose: simpler calculation
+            let charCount = text.count
+            let estimatedCharWidth: CGFloat = 14
+            let calculatedSize = maxWidth / (CGFloat(charCount) * estimatedCharWidth / 20)
+            return max(14, min(24, calculatedSize))
         }
     }
 
@@ -152,24 +138,25 @@ struct QuoteTextView: View {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
                     Text(line)
-                        .font(dynamicFont)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                        .minimumScaleFactor(0.5) // Allow significant scaling to fit screen
+                        .font(.system(size: uniformFontSize))
+                        .fontWeight(.bold)
+                        .foregroundColor(Color(red: 0.2, green: 0.2, blue: 0.2))
+                        .minimumScaleFactor(1.0) // No scaling - use calculated uniform size
                         .lineLimit(1)
                         .multilineTextAlignment(.leading)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: maxWidth, alignment: .leading)
         } else {
             // Prose: Normal text display
             Text(text)
-                .font(dynamicFont)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .font(.system(size: uniformFontSize))
+                .fontWeight(.bold)
+                .foregroundColor(Color(red: 0.2, green: 0.2, blue: 0.2))
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: maxWidth)
         }
     }
 }
