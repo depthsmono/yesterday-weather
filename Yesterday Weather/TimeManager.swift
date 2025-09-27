@@ -68,23 +68,9 @@ class TimeManager: ObservableObject {
         let formatter = DateFormatter()
         formatter.timeZone = nycTimeZone
 
-        let calendar = nycCalendar
-        if calendar.isDateInTomorrow(date) {
-            return "Tomorrow"
-        }
-
-        formatter.dateFormat = "EEEE"
-        let dayName = formatter.string(from: date)
-
-        // For this week, show full day name, for next week show abbreviated
-        let daysFromNow = calendar.dateComponents([.day], from: calendar.startOfDay(for: currentNYCTime), to: calendar.startOfDay(for: date)).day ?? 0
-
-        if daysFromNow > 7 {
-            formatter.dateFormat = "E" // Abbreviated (Mon, Tue, etc.)
-            return formatter.string(from: date)
-        } else {
-            return dayName
-        }
+        // Always use abbreviated day names for consistent layout
+        formatter.dateFormat = "E" // Abbreviated (Mon, Tue, etc.)
+        return formatter.string(from: date)
     }
 
     // MARK: - Time zone conversion helpers
@@ -160,6 +146,67 @@ class TimeManager: ObservableObject {
 
         print("TimeManager: Found \(hoursToShow.count) relevant hours out of \(hourlyData.time.count) total")
         return hoursToShow
+    }
+
+    // MARK: - Day/Night Detection
+
+    func isDayTime(at date: Date, sunrise: Date?, sunset: Date?) -> Bool {
+        guard let sunrise = sunrise, let sunset = sunset else {
+            // Fallback: use simple time-based logic if sunrise/sunset not available
+            let hour = nycCalendar.component(.hour, from: date)
+            return hour >= 6 && hour < 19  // 6 AM to 7 PM as day
+        }
+
+        // Compare with actual sunrise/sunset times
+        let result = date >= sunrise && date < sunset
+        let formatter = DateFormatter()
+        formatter.timeZone = nycTimeZone
+        formatter.dateFormat = "HH:mm"
+        print("TimeManager: isDayTime at \(formatter.string(from: date)) - sunrise: \(formatter.string(from: sunrise)), sunset: \(formatter.string(from: sunset)) -> \(result ? "DAY" : "NIGHT")")
+        return result
+    }
+
+    func isDayTimeToday(at date: Date, dailyWeather: DailyWeather?) -> Bool {
+        guard let dailyWeather = dailyWeather,
+              !dailyWeather.sunrise.isEmpty,
+              !dailyWeather.sunset.isEmpty else {
+            // Fallback logic
+            let hour = nycCalendar.component(.hour, from: date)
+            return hour >= 6 && hour < 19
+        }
+
+        // Find the appropriate day's sunrise/sunset
+        let targetDay = nycCalendar.startOfDay(for: date)
+
+        for (index, dayString) in dailyWeather.time.enumerated() {
+            guard let dayDate = parseDate(from: dayString) else { continue }
+            let dayStart = nycCalendar.startOfDay(for: dayDate)
+
+            if nycCalendar.isDate(targetDay, inSameDayAs: dayStart) {
+                // Found matching day, parse sunrise/sunset
+                let sunrise = parseSunriseSunset(dailyWeather.sunrise[index])
+                let sunset = parseSunriseSunset(dailyWeather.sunset[index])
+                return isDayTime(at: date, sunrise: sunrise, sunset: sunset)
+            }
+        }
+
+        // Fallback if no matching day found
+        let hour = nycCalendar.component(.hour, from: date)
+        return hour >= 6 && hour < 19
+    }
+
+    private func parseDate(from dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = nycTimeZone
+        return formatter.date(from: dateString)
+    }
+
+    private func parseSunriseSunset(_ timeString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
+        formatter.timeZone = nycTimeZone
+        return formatter.date(from: timeString)
     }
 
     // MARK: - Debug info

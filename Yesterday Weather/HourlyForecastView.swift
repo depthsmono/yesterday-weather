@@ -49,12 +49,10 @@ struct HourlyForecastCard: View {
             Text(isNow ? "Now" : hour.timeString)
                 .font(.caption2)
                 .fontWeight(isNow ? .semibold : .medium)
-                .foregroundColor(isNow ? .orange : .secondary)
+                .foregroundColor(isNow ? .warmEmphasis : .warmTextSecondary)
 
             // Weather Icon
-            Image(systemName: hour.icon)
-                .font(.system(size: 20))
-                .foregroundColor(.blue)
+            WeatherIconView(weatherCode: hour.weatherCode, isDay: hour.isDayTime, size: 20)
                 .frame(height: 22)
 
             // Temperature
@@ -68,10 +66,10 @@ struct HourlyForecastCard: View {
                 VStack(spacing: 2) {
                     Image(systemName: "drop.fill")
                         .font(.system(size: 8))
-                        .foregroundColor(.blue)
+                        .foregroundColor(.weatherRain)
                     Text("\(String(format: "%.0f", hour.precipitation * 100))%")
                         .font(.system(size: 8))
-                        .foregroundColor(.blue)
+                        .foregroundColor(.weatherRain)
                 }
             } else {
                 VStack(spacing: 2) {
@@ -86,11 +84,11 @@ struct HourlyForecastCard: View {
         .frame(width: 44)
         .padding(.vertical, 8)
         .padding(.horizontal, 6)
-        .background(isNow ? Color.orange.opacity(0.1) : Color.clear)
+        .background(isNow ? Color.warmEmphasis.opacity(0.1) : Color.clear)
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isNow ? Color.orange.opacity(0.3) : Color.clear, lineWidth: 1)
+                .stroke(isNow ? Color.warmEmphasis.opacity(0.3) : Color.clear, lineWidth: 1)
         )
     }
 }

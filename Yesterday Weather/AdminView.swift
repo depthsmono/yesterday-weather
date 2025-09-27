@@ -11,37 +11,8 @@ struct AdminView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var narrativeSettings = NarrativeSettings.shared
 
-    // All weather codes from WeatherCodeMapper
-    private let weatherCodes: [(code: Int, description: String)] = [
-        (0, "Clear sky"),
-        (1, "Mainly clear"),
-        (2, "Partly cloudy"),
-        (3, "Overcast"),
-        (45, "Fog"),
-        (48, "Depositing rime fog"),
-        (51, "Light drizzle"),
-        (53, "Moderate drizzle"),
-        (55, "Dense drizzle"),
-        (56, "Light freezing drizzle"),
-        (57, "Dense freezing drizzle"),
-        (61, "Slight rain"),
-        (63, "Moderate rain"),
-        (65, "Heavy rain"),
-        (66, "Light freezing rain"),
-        (67, "Heavy freezing rain"),
-        (71, "Slight snow fall"),
-        (73, "Moderate snow fall"),
-        (75, "Heavy snow fall"),
-        (77, "Snow grains"),
-        (80, "Slight rain showers"),
-        (81, "Moderate rain showers"),
-        (82, "Violent rain showers"),
-        (85, "Slight snow showers"),
-        (86, "Heavy snow showers"),
-        (95, "Thunderstorm"),
-        (96, "Thunderstorm with slight hail"),
-        (99, "Thunderstorm with heavy hail")
-    ]
+    // Weather conditions from enhanced weather icon mapper
+    private let weatherCodes = WeatherIconMapper.allWeatherConditions
 
     var body: some View {
         NavigationStack {
@@ -59,9 +30,11 @@ struct AdminView: View {
                             GridItem(.flexible())
                         ], spacing: 16) {
                             ForEach(weatherCodes, id: \.code) { weather in
-                                WeatherIconCard(
+                                EnhancedWeatherIconCard(
                                     code: weather.code,
-                                    description: weather.description
+                                    description: weather.description,
+                                    dayIcon: weather.dayIcon,
+                                    nightIcon: weather.nightIcon
                                 )
                             }
                         }
@@ -77,9 +50,8 @@ struct AdminView: View {
                 .padding()
             }
             .navigationTitle("Admin Panel")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         narrativeSettings.saveSettings()
                         dismiss()
@@ -90,9 +62,11 @@ struct AdminView: View {
     }
 }
 
-struct WeatherIconCard: View {
+struct EnhancedWeatherIconCard: View {
     let code: Int
     let description: String
+    let dayIcon: String
+    let nightIcon: String?
 
     var body: some View {
         VStack(spacing: 12) {
@@ -102,11 +76,30 @@ struct WeatherIconCard: View {
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
 
-            // Weather Icon
-            Image(systemName: WeatherCodeMapper.icon(for: code))
-                .font(.system(size: 40))
-                .foregroundColor(.blue)
-                .frame(height: 50)
+            // Weather Icons - Day and Night
+            HStack(spacing: 16) {
+                VStack(spacing: 6) {
+                    // Day Icon
+                    WeatherIconView(weatherCode: code, isDay: true, size: 32)
+                        .frame(height: 40)
+
+                    Text("Day")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                }
+
+                if nightIcon != nil {
+                    VStack(spacing: 6) {
+                        // Night Icon
+                        WeatherIconView(weatherCode: code, isDay: false, size: 32)
+                            .frame(height: 40)
+
+                        Text("Night")
+                            .font(.caption2)
+                            .foregroundColor(.indigo)
+                    }
+                }
+            }
 
             // Description
             Text(description)
@@ -115,14 +108,26 @@ struct WeatherIconCard: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
 
-            // Icon Name
-            Text(WeatherCodeMapper.icon(for: code))
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.secondary.opacity(0.1))
-                .cornerRadius(6)
+            // Icon Names
+            VStack(spacing: 4) {
+                Text(dayIcon)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(4)
+
+                if let nightIcon = nightIcon {
+                    Text(nightIcon)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.indigo.opacity(0.1))
+                        .cornerRadius(4)
+                }
+            }
         }
         .padding()
         .frame(maxWidth: .infinity)

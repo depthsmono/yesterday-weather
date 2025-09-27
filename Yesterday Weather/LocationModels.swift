@@ -72,13 +72,17 @@ class LocationManager: ObservableObject {
     @Published var isSearching = false
 
     init() {
-        // Simple init without any UserDefaults access for now
+        loadLocations()
     }
 
     func addLocation(_ location: WeatherLocation) {
+        print("LocationManager: Adding location - \(location.name)")
         if !locations.contains(where: { $0.name == location.name }) {
             locations.append(location)
+            print("LocationManager: Location added successfully. Total locations: \(locations.count)")
             saveLocations()
+        } else {
+            print("LocationManager: Location already exists - \(location.name)")
         }
     }
 
@@ -88,13 +92,16 @@ class LocationManager: ObservableObject {
     }
 
     func setCurrentLocation(_ location: WeatherLocation) {
+        print("LocationManager: Setting current location to - \(location.name)")
         currentLocation = location
         // Move to top of list if not already there
         if let index = locations.firstIndex(where: { $0.id == location.id }) {
             locations.remove(at: index)
+            print("LocationManager: Moved existing location to top of list")
         }
         locations.insert(location, at: 0)
         saveLocations()
+        print("LocationManager: Current location set successfully")
     }
 
     @MainActor func searchLocations(query: String) async {
@@ -145,21 +152,26 @@ class LocationManager: ObservableObject {
     }
 
     private func loadLocations() {
+        print("LocationManager: Loading saved locations...")
         if let data = UserDefaults.standard.data(forKey: "savedLocations"),
            let decoded = try? JSONDecoder().decode([WeatherLocation].self, from: data) {
             locations = decoded
+            print("LocationManager: Loaded \(locations.count) saved locations")
         } else {
             // Default locations
             locations = [WeatherLocation.newYorkMetro]
+            print("LocationManager: No saved locations found, using default")
         }
 
         // Load current location
         if let data = UserDefaults.standard.data(forKey: "currentLocation"),
            let decoded = try? JSONDecoder().decode(WeatherLocation.self, from: data) {
             currentLocation = decoded
+            print("LocationManager: Loaded current location - \(currentLocation.name)")
         } else {
             // Set default current location if none saved
             currentLocation = WeatherLocation.newYorkMetro
+            print("LocationManager: No saved current location, using default - \(currentLocation.name)")
         }
     }
 

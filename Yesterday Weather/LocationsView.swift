@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct LocationsView: View {
-    @StateObject private var locationManager = LocationManager()
+    @EnvironmentObject var locationManager: LocationManager
     @State private var searchText = ""
     @Environment(\.dismiss) private var dismiss
 
@@ -41,7 +41,7 @@ struct LocationsView: View {
                             }
                         }
                         .padding(12)
-                        .background(Color(.systemGray6))
+                        .background(Color.warmBackground.opacity(0.6))
                         .cornerRadius(10)
 
                         Button("Search") {
@@ -54,7 +54,7 @@ struct LocationsView: View {
                     }
                 }
                 .padding()
-                .background(Color(.systemGray6).opacity(0.3))
+                .background(Color.warmBackground.opacity(0.6))
 
                 ScrollView {
                     VStack(spacing: 16) {
@@ -139,10 +139,9 @@ struct LocationsView: View {
                 Spacer()
             }
             .navigationTitle("Locations")
-            .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Done") {
                         dismiss()
                     }
@@ -177,7 +176,7 @@ struct LocationCard: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 2)
-                                .background(Color.blue)
+                                .background(Color.warmAccent)
                                 .cornerRadius(8)
                         }
 
@@ -196,18 +195,18 @@ struct LocationCard: View {
                         onDelete()
                     }) {
                         Image(systemName: "trash")
-                            .foregroundColor(.red)
+                            .foregroundColor(.warmError)
                             .font(.caption)
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
             }
             .padding()
-            .background(isCurrent ? Color.blue.opacity(0.1) : Color.white)
+            .background(isCurrent ? Color.warmAccent.opacity(0.1) : Color.white)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isCurrent ? Color.blue.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 1)
+                    .stroke(isCurrent ? Color.warmAccent.opacity(0.3) : Color.warmTextTertiary.opacity(0.2), lineWidth: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -237,11 +236,11 @@ struct SearchResultCard: View {
                 Spacer()
 
                 Image(systemName: "plus.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(.warmSuccess)
                     .font(.title3)
             }
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color.warmBackground.opacity(0.3))
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
@@ -250,4 +249,5 @@ struct SearchResultCard: View {
 
 #Preview {
     LocationsView()
+        .environmentObject(LocationManager())
 }

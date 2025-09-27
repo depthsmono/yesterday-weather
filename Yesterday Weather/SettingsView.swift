@@ -12,6 +12,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var feedbackText = ""
     @State private var feedbackSubmitted = false
+    @State private var showingAdmin = false
 
     var body: some View {
         NavigationView {
@@ -76,8 +77,6 @@ struct SettingsView: View {
                                     ),
                                     displayedComponents: .hourAndMinute
                                 )
-                                .datePickerStyle(WheelDatePickerStyle())
-                                .labelsHidden()
 
                                 Text("Weather data will be loaded at \(settingsManager.preloadTime, formatter: timeFormatter)")
                                     .font(.caption)
@@ -120,7 +119,7 @@ struct SettingsView: View {
                             Text("Thanks for your suggestion!")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                                .foregroundColor(.green)
+                                .foregroundColor(.warmSuccess)
                                 .padding(.vertical, 8)
                         }
                     }
@@ -151,18 +150,52 @@ struct SettingsView: View {
                         .font(.headline)
                         .foregroundColor(.primary)
                 }
+
+                // Admin Section
+                Section {
+                    Button(action: {
+                        showingAdmin = true
+                    }) {
+                        HStack {
+                            Image(systemName: "gearshape.2.fill")
+                                .foregroundColor(.warmAccent)
+                                .frame(width: 20)
+
+                            Text("Admin Panel")
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+
+                            Spacer()
+
+                            HStack(spacing: 4) {
+                                Text("Weather Icons & Settings")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    Label("Administration", systemImage: "key.fill")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
             }
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.automatic)
             .navigationBarBackButtonHidden(true)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Done") {
                         dismiss()
                     }
-                    .fontWeight(.medium)
                 }
             }
+        }
+        .sheet(isPresented: $showingAdmin) {
+            AdminView()
         }
     }
 
@@ -196,7 +229,7 @@ struct WeatherExperienceRow: View {
         HStack(spacing: 16) {
             Image(systemName: experience.icon)
                 .font(.title2)
-                .foregroundColor(isEnabled ? .blue : .gray)
+                .foregroundColor(isEnabled ? .warmAccent : .warmTextTertiary)
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 2) {

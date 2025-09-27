@@ -55,7 +55,7 @@ struct ContentView: View {
                             }) {
                                 Image(systemName: "plus.circle")
                                     .font(.title2)
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(.warmAccent)
                             }
 
                             Button(action: {
@@ -63,7 +63,7 @@ struct ContentView: View {
                             }) {
                                 Image(systemName: "gearshape")
                                     .font(.title2)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.warmTextSecondary)
                             }
                         }
                     }
@@ -106,11 +106,7 @@ struct ContentView: View {
             }
         }
         .background(
-            LinearGradient(
-                gradient: Gradient(colors: [Color.blue.opacity(0.1), Color.white]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            LinearGradient.warmAppBackground
         )
         .sheet(isPresented: $showingLocations) {
             LocationsView()
@@ -127,7 +123,15 @@ struct ContentView: View {
             // Get a new random quote each time the app loads
             loadingQuote = WeatherQuoteBank.randomQuote()
             showQuote = true
-            await weatherService.fetchWeatherComparison(for: locationManager.currentLocation)
+            // 🚀 PERFORMANCE: Use progressive loading for faster UX
+            await weatherService.fetchWeatherDataProgressively(for: locationManager.currentLocation)
+        }
+        .onChange(of: locationManager.currentLocation) { oldLocation, newLocation in
+            // Refresh weather data when location changes
+            Task {
+                // 🚀 PERFORMANCE: Use progressive loading for faster location switching
+                await weatherService.fetchWeatherDataProgressively(for: newLocation)
+            }
         }
     }
 }
@@ -151,7 +155,7 @@ struct WeatherComparisonView: View {
                 }
 
                 // Weather Cards
-                HStack(spacing: 16) {
+                HStack(alignment: .top, spacing: 16) {
                     WeatherCard(
                         title: "Yesterday",
                         subtitle: "Actual",
@@ -194,9 +198,8 @@ struct ComparisonHeaderView: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack {
-                Image(systemName: WeatherCodeMapper.icon(for: comparison.today.weatherCode))
-                    .font(.system(size: 40))
-                    .foregroundColor(.orange)
+                WeatherIconView(weatherCode: comparison.today.weatherCode, isDay: true, size: 40)
+                    .foregroundColor(.weatherSun)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(String(format: "%.0f", comparison.today.temperature))°F")
@@ -222,7 +225,7 @@ struct ComparisonHeaderView: View {
                     if let primaryAdvice = analysis.advice.first {
                         Text(primaryAdvice)
                             .font(.caption2)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.warmAccent)
                             .fontWeight(.medium)
                             .multilineTextAlignment(.trailing)
                     }
@@ -232,7 +235,7 @@ struct ComparisonHeaderView: View {
             // Hourly Forecast
             if let hourlyForecast = hourlyForecast {
                 Divider()
-                    .background(Color.gray.opacity(0.3))
+                    .background(Color.warmTextTertiary.opacity(0.4))
 
                 HourlyForecastView(hourlyForecast: hourlyForecast)
                     .onAppear {
@@ -241,23 +244,14 @@ struct ComparisonHeaderView: View {
             } else {
                 Text("Debug: No hourly forecast data")
                     .font(.caption)
-                    .foregroundColor(.red)
+                    .foregroundColor(.warmError)
                     .onAppear {
                         print("ComparisonHeaderView: hourlyForecast is nil")
                     }
             }
         }
         .padding()
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.purple.opacity(0.15),
-                    Color.pink.opacity(0.1)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .background(LinearGradient.warmHeader)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.horizontal)
@@ -291,9 +285,8 @@ struct WeatherCard: View {
                     .foregroundColor(.secondary)
             }
 
-            Image(systemName: WeatherCodeMapper.icon(for: weather.weatherCode))
-                .font(.system(size: 30))
-                .foregroundColor(isPrimary ? .orange : .blue)
+            WeatherIconView(weatherCode: weather.weatherCode, isDay: true, size: 30)
+                .foregroundColor(isPrimary ? .warmAccent : .warmSecondary)
 
             Text("\(String(format: "%.0f", weather.temperature))°F")
                 .font(.title2)
@@ -307,7 +300,7 @@ struct WeatherCard: View {
             VStack(spacing: 6) {
                 HStack {
                     Image(systemName: "drop.fill")
-                        .foregroundColor(.blue)
+                        .foregroundColor(.weatherRain)
                         .font(.caption)
                     Text("\(String(format: "%.1f", weather.precipitation))\"")
                         .font(.caption)
@@ -315,7 +308,7 @@ struct WeatherCard: View {
 
                 HStack {
                     Image(systemName: "humidity.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(.warmSuccess)
                         .font(.caption)
                     Text("\(weather.humidity)%")
                         .font(.caption)
@@ -323,7 +316,7 @@ struct WeatherCard: View {
 
                 HStack {
                     Image(systemName: "wind")
-                        .foregroundColor(.gray)
+                        .foregroundColor(.weatherNeutral)
                         .font(.caption)
                     Text("\(String(format: "%.0f", weather.windSpeed)) mph")
                         .font(.caption)
@@ -331,12 +324,12 @@ struct WeatherCard: View {
             }
         }
         .padding()
-        .frame(maxWidth: .infinity)
-        .background(isPrimary ? Color.orange.opacity(0.1) : Color.blue.opacity(0.1))
+        .frame(maxWidth: .infinity, minHeight: 280)
+        .background(isPrimary ? Color.warmAccent.opacity(0.1) : Color.warmSecondary.opacity(0.1))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isPrimary ? Color.orange.opacity(0.3) : Color.blue.opacity(0.3), lineWidth: 1)
+                .stroke(isPrimary ? Color.warmAccent.opacity(0.3) : Color.warmSecondary.opacity(0.3), lineWidth: 1)
         )
     }
 }
@@ -380,16 +373,7 @@ struct ComparisonDetailsView: View {
             }
         }
         .padding()
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.orange.opacity(0.12),
-                    Color.yellow.opacity(0.08)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .background(LinearGradient.warmCard)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.horizontal)
@@ -482,11 +466,7 @@ struct LoadingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            LinearGradient(
-                gradient: Gradient(colors: [Color.blue.opacity(0.1), Color.white]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            LinearGradient.warmAppBackground
             .ignoresSafeArea(.all)
         )
     }
@@ -500,7 +480,7 @@ struct ErrorView: View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 50))
-                .foregroundColor(.red)
+                .foregroundColor(.warmError)
 
             Text("Weather Unavailable")
                 .font(.headline)
@@ -529,7 +509,7 @@ struct EmptyStateView: View {
         VStack(spacing: 16) {
             Image(systemName: "cloud.sun.fill")
                 .font(.system(size: 60))
-                .foregroundColor(.blue)
+                .foregroundColor(.warmAccent)
 
             Text("Yesterday Weather")
                 .font(.title2)
@@ -576,16 +556,7 @@ struct TenDayForecastView: View {
             }
         }
         .padding()
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.mint.opacity(0.15),
-                    Color.teal.opacity(0.1)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .background(LinearGradient.warmForecast)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.horizontal)
@@ -601,11 +572,10 @@ struct DayForecastCard: View {
             Text(isToday ? "Today" : day.dayName)
                 .font(.caption)
                 .fontWeight(isToday ? .bold : .medium)
-                .foregroundColor(isToday ? .orange : .primary)
+                .foregroundColor(isToday ? .warmEmphasis : .warmTextPrimary)
 
-            Image(systemName: day.icon)
-                .font(.title2)
-                .foregroundColor(.blue)
+            WeatherIconView(weatherCode: weatherCodeForDay(day), isDay: true, size: 24)
+                .foregroundColor(.weatherSun)
                 .frame(height: 24)
 
             VStack(spacing: 2) {
@@ -625,7 +595,7 @@ struct DayForecastCard: View {
                         .foregroundColor(.blue)
                     Text("\(String(format: "%.1f", day.precipitation))\"")
                         .font(.caption2)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.weatherRain)
                 }
             } else {
                 Text(" ")
@@ -635,12 +605,25 @@ struct DayForecastCard: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 8)
         .frame(width: 70)
-        .background(isToday ? Color.orange.opacity(0.1) : Color.clear)
+        .background(isToday ? Color.warmEmphasis.opacity(0.12) : Color.clear)
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isToday ? Color.orange.opacity(0.3) : Color.clear, lineWidth: 1)
+                .stroke(isToday ? Color.warmEmphasis.opacity(0.4) : Color.clear, lineWidth: 1)
         )
+    }
+
+    private func weatherCodeForDay(_ day: DayForecast) -> Int {
+        // Simple weather code mapping based on precipitation
+        if day.precipitation > 0.2 {
+            return 63 // Moderate rain
+        } else if day.precipitationProbability > 50 {
+            return 61 // Slight rain
+        } else if day.precipitationProbability > 20 {
+            return 2 // Partly cloudy
+        } else {
+            return 0 // Clear sky
+        }
     }
 }
 
@@ -649,43 +632,75 @@ struct DayForecastCard: View {
 struct QuoteOfTheDayView: View {
     let quote: WeatherQuote
 
+    private var lines: [String] {
+        quote.text.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+    }
+
+    private var hasLineBreaks: Bool {
+        quote.text.contains("\n")
+    }
+
+    private var dynamicFont: Font {
+        if hasLineBreaks {
+            // Poetry - scale down to preserve line breaks and fit screen
+            let lineCount = lines.count
+            let longestLineLength = lines.map { $0.count }.max() ?? 0
+
+            // Start smaller for longer lines or more lines
+            switch (lineCount, longestLineLength) {
+            case (1...2, 0..<50): return .callout
+            case (1...2, _): return .footnote
+            case (3...4, 0..<40): return .footnote
+            case (3...4, _): return .caption
+            case (5...6, 0..<35): return .caption
+            case (5...6, _): return .caption2
+            default: return .caption2
+            }
+        } else {
+            // Prose - normal flowing text
+            return .body
+        }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
-            Text("Quote of the Day")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(spacing: 16) {
+            if hasLineBreaks {
+                // Poetry: Display each line separately to prevent auto-wrapping
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                        Text(line)
+                            .font(dynamicFont)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                            .minimumScaleFactor(0.5) // Allow significant scaling to fit screen
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(.horizontal, 16)
+            } else {
+                // Prose: Normal text display
                 Text(quote.text)
-                    .font(.body)
+                    .font(dynamicFont)
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
                     .padding(.horizontal, 16)
-
-                Text("— \(quote.attribution) —")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .italic()
-                    .multilineTextAlignment(.center)
             }
-            .padding(.vertical, 20)
-            .background(Color(.systemGray6).opacity(0.5))
-            .cornerRadius(12)
+
+            Text("— \(quote.attribution) —")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
+                .italic()
+                .multilineTextAlignment(.center)
         }
+        .padding(.vertical, 20)
+        .background(Color.warmBackground.opacity(0.6))
+        .cornerRadius(12)
         .padding()
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.indigo.opacity(0.12),
-                    Color.purple.opacity(0.08)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .background(LinearGradient.warmQuote)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.horizontal)

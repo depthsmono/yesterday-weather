@@ -359,41 +359,11 @@ enum ComparisonResult {
 
 struct WeatherCodeMapper {
     static func description(for code: Int) -> String {
-        switch code {
-        case 0: return "Clear sky"
-        case 1: return "Mainly clear"
-        case 2: return "Partly cloudy"
-        case 3: return "Overcast"
-        case 45, 48: return "Foggy"
-        case 51, 53, 55: return "Light drizzle"
-        case 56, 57: return "Freezing drizzle"
-        case 61, 63, 65: return "Rain"
-        case 66, 67: return "Freezing rain"
-        case 71, 73, 75: return "Snow"
-        case 77: return "Snow grains"
-        case 80, 81, 82: return "Rain showers"
-        case 85, 86: return "Snow showers"
-        case 95: return "Thunderstorm"
-        case 96, 99: return "Thunderstorm with hail"
-        default: return "Unknown"
-        }
+        return WeatherIconMapper.getIconDescription(for: code, isDay: true)
     }
 
     static func icon(for code: Int) -> String {
-        switch code {
-        case 0: return "sun.max.fill"
-        case 1: return "sun.max.circle.fill"
-        case 2: return "cloud.sun.fill"
-        case 3: return "cloud.fill"
-        case 45, 48: return "cloud.fog.fill"
-        case 51, 53, 55, 56, 57: return "cloud.drizzle.fill"
-        case 61, 63, 65, 66, 67: return "cloud.rain.fill"
-        case 71, 73, 75, 77: return "cloud.snow.fill"
-        case 80, 81, 82: return "cloud.rain.fill"
-        case 85, 86: return "cloud.snow.fill"
-        case 95, 96, 99: return "cloud.bolt.rain.fill"
-        default: return "questionmark.circle.fill"
-        }
+        return WeatherIconMapper.getSFSymbolFallback(for: code)
     }
 }
 
@@ -407,7 +377,7 @@ struct HourlyForecastData {
         self.hours = hours
     }
 
-    init(from hourlyWeather: HourlyWeather, count: Int = 12) {
+    init(from hourlyWeather: HourlyWeather, dailyWeather: DailyWeather? = nil, count: Int = 12) {
         let timeManager = TimeManager.shared
         print("HourlyForecastData: Initializing with \(hourlyWeather.time.count) total hours")
 
@@ -416,9 +386,9 @@ struct HourlyForecastData {
 
         var dataPoints: [HourlyDataPoint] = []
         for (index, date) in relevantHours {
-            let dataPoint = HourlyDataPoint(from: hourlyWeather, index: index, actualDate: date)
+            let dataPoint = HourlyDataPoint(from: hourlyWeather, index: index, actualDate: date, dailyWeather: dailyWeather)
             dataPoints.append(dataPoint)
-            print("HourlyForecastData: Added hour \(dataPoint.timeString) at \(dataPoint.temperature)°")
+            print("HourlyForecastData: Added hour \(dataPoint.timeString) at \(dataPoint.temperature)° (\(dataPoint.isDayTime ? "day" : "night"))")
         }
 
         // Fallback: if no relevant hours found, show first few hours from API
@@ -426,7 +396,7 @@ struct HourlyForecastData {
             print("HourlyForecastData: No relevant hours found, using fallback with first \(min(count, hourlyWeather.time.count)) hours")
             for i in 0..<min(count, hourlyWeather.time.count) {
                 if let date = timeManager.convertAPITimeToNYC(hourlyWeather.time[i]) {
-                    let dataPoint = HourlyDataPoint(from: hourlyWeather, index: i, actualDate: date)
+                    let dataPoint = HourlyDataPoint(from: hourlyWeather, index: i, actualDate: date, dailyWeather: dailyWeather)
                     dataPoints.append(dataPoint)
                 }
             }
@@ -451,8 +421,9 @@ struct HourlyDataPoint {
     let weatherCode: Int
     let icon: String
     let description: String
+    let isDayTime: Bool
 
-    init(from hourlyWeather: HourlyWeather, index: Int, actualDate: Date) {
+    init(from hourlyWeather: HourlyWeather, index: Int, actualDate: Date, dailyWeather: DailyWeather? = nil) {
         let timeManager = TimeManager.shared
 
         self.time = actualDate
@@ -467,6 +438,9 @@ struct HourlyDataPoint {
         self.windSpeed = hourlyWeather.windSpeed10m[index]
         self.windDirection = hourlyWeather.windDirection10m[index]
         self.weatherCode = hourlyWeather.weatherCode[index]
+
+        // Determine if it's day or night time
+        self.isDayTime = timeManager.isDayTimeToday(at: actualDate, dailyWeather: dailyWeather)
 
         // Use weather code for accurate icons and descriptions
         self.icon = WeatherCodeMapper.icon(for: self.weatherCode)
