@@ -701,65 +701,105 @@ struct QuoteOfTheDayView: View {
         quote.text.contains("\n")
     }
 
-    private var dynamicFont: Font {
-        if hasLineBreaks {
-            // Poetry - scale down to preserve line breaks and fit screen
-            let lineCount = lines.count
-            let longestLineLength = lines.map { $0.count }.max() ?? 0
+    private func uniformFontSize(for maxWidth: CGFloat) -> CGFloat {
+        // Calculate the maximum font size that will fit ALL lines within the target width
+        // without any individual line needing to scale down
 
-            // Start smaller for longer lines or more lines
-            switch (lineCount, longestLineLength) {
-            case (1...2, 0..<50): return .callout
-            case (1...2, _): return .footnote
-            case (3...4, 0..<40): return .footnote
-            case (3...4, _): return .caption
-            case (5...6, 0..<35): return .caption
-            case (5...6, _): return .caption2
-            default: return .caption2
+        if hasLineBreaks {
+            // For poetry: find the longest line and calculate font size based on that
+            let longestLineLength = lines.map { $0.count }.max() ?? 1
+
+            // Estimate character width more accurately for different font sizes
+            // We'll iteratively find the largest size that fits
+            let targetWidth = maxWidth * 0.9 // Use 90% of available width for padding
+
+            // Start with a reasonable font size and work backwards
+            var fontSize: CGFloat = 20 // Smaller max for homepage
+            let minFontSize: CGFloat = 12 // Minimum readable size
+
+            while fontSize >= minFontSize {
+                // Estimate width needed for longest line at this font size
+                let estimatedCharWidth = fontSize * 0.55
+                let estimatedWidth = CGFloat(longestLineLength) * estimatedCharWidth
+
+                if estimatedWidth <= targetWidth {
+                    // This size fits - use it
+                    return fontSize
+                }
+
+                fontSize -= 1
             }
+
+            return minFontSize
         } else {
-            // Prose - normal flowing text
-            return .body
+            // For prose: simpler calculation
+            let charCount = quote.text.count
+            let targetWidth = maxWidth * 0.9
+            let estimatedCharWidth: CGFloat = 12
+            let calculatedSize = targetWidth / (CGFloat(charCount) * estimatedCharWidth / 20)
+            return max(12, min(18, calculatedSize))
         }
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            if hasLineBreaks {
-                // Poetry: Display each line separately to prevent auto-wrapping
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                        Text(line)
-                            .font(dynamicFont)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
-                            .minimumScaleFactor(0.5) // Allow significant scaling to fit screen
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .padding(.horizontal, 16)
-            } else {
-                // Prose: Normal text display
-                Text(quote.text)
-                    .font(dynamicFont)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 16)
-            }
+        GeometryReader { geometry in
+            // Center the entire quote + attribution block within the card
+            VStack {
+                Spacer() // Top spacer to center vertically
 
-            Text("— \(quote.attribution) —")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-                .italic()
-                .multilineTextAlignment(.center)
+                HStack {
+                    Spacer() // Left spacer to center horizontally
+
+                    VStack(spacing: 20) {
+                        // Quote text with dynamic scaling
+                        if hasLineBreaks {
+                            // Poetry: Display each line separately to prevent auto-wrapping
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                                    Text(line)
+                                        .font(.system(size: uniformFontSize(for: geometry.size.width)))
+                                        .fontWeight(.bold)
+                                        .foregroundColor(Color(red: 0.2, green: 0.2, blue: 0.2))
+                                        .minimumScaleFactor(1.0) // No scaling - use calculated uniform size
+                                        .lineLimit(1)
+                                        .multilineTextAlignment(.leading)
+                                }
+                            }
+                            .frame(maxWidth: geometry.size.width * 0.85, alignment: .leading)
+                        } else {
+                            // Prose: Normal text display
+                            Text(quote.text)
+                                .font(.system(size: uniformFontSize(for: geometry.size.width)))
+                                .fontWeight(.bold)
+                                .foregroundColor(Color(red: 0.2, green: 0.2, blue: 0.2))
+                                .multilineTextAlignment(.leading)
+                                .lineSpacing(4)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: geometry.size.width * 0.85, alignment: .leading)
+                        }
+
+                        // Attribution - right aligned to the full frame width (matching loading screen)
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(quote.author)
+                                .font(.system(size: uniformFontSize(for: geometry.size.width) * 0.6)) // 40% smaller
+                                .foregroundColor(Color(red: 0.2, green: 0.2, blue: 0.2))
+                                .multilineTextAlignment(.trailing)
+
+                            Text(quote.work)
+                                .font(.system(size: uniformFontSize(for: geometry.size.width) * 0.6)) // 40% smaller
+                                .foregroundColor(Color(red: 0.2, green: 0.2, blue: 0.2))
+                                .multilineTextAlignment(.trailing)
+                        }
+                        .frame(maxWidth: geometry.size.width * 0.85, alignment: .trailing) // Right align to frame edge
+                    }
+
+                    Spacer() // Right spacer to center horizontally
+                }
+                .frame(maxWidth: geometry.size.width * 0.85) // Overall content constraint
+
+                Spacer() // Bottom spacer to center vertically
+            }
         }
-        .padding(.vertical, 20)
-        .background(Color.warmBackground.opacity(0.6))
-        .cornerRadius(12)
         .padding()
         .background(LinearGradient.warmQuote)
         .cornerRadius(16)
@@ -769,6 +809,7 @@ struct QuoteOfTheDayView: View {
         )
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.horizontal)
+        .frame(minHeight: 180) // Minimum height for consistency
     }
 }
 

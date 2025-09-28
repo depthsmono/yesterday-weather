@@ -166,25 +166,10 @@ struct LocationCard: View {
         Button(action: onSelect) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(location.name)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-
-                        if isCurrent {
-                            Text("Current")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(Color.warmAccent)
-                                .cornerRadius(8)
-                        }
-
-                        Spacer()
-                    }
+                    Text(location.name)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
 
                     Text("Lat: \(String(format: "%.4f", location.latitude)), Lon: \(String(format: "%.4f", location.longitude))")
                         .font(.caption)
@@ -193,7 +178,17 @@ struct LocationCard: View {
 
                 Spacer()
 
-                if let onDelete = onDelete, !isCurrent {
+                // Right-aligned current pill or delete button
+                if isCurrent {
+                    Text("Current")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.warmAccent)
+                        .cornerRadius(8)
+                } else if let onDelete = onDelete {
                     Button(action: {
                         onDelete()
                     }) {
